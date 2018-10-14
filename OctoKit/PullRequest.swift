@@ -116,6 +116,28 @@ public extension Octokit {
             }
         }
     }
+
+    public func writePullRequest(_ session: RequestKitURLSession = URLSession.shared,
+                             owner: String,
+                             repository: String,
+                             title: String,
+                             head: String,
+                             base: String,
+                             body: String? = nil,
+                             maintainerCanModify: Bool? = nil,
+                             completion: @escaping (_ response: Response<[PullRequest]>) -> Void) -> URLSessionDataTaskProtocol? {
+
+        let router = PullRequestRouter.writePullRequest(configuration, owner, repository, title, head, base, body, maintainerCanModify)
+        return router.load(session, dateDecodingStrategy: .formatted(Time.rfc3339DateFormatter), expectedResultType: [PullRequest].self) { pullRequests, error in
+            if let error = error {
+                completion(Response.failure(error))
+            } else {
+                if let pullRequests = pullRequests {
+                    completion(Response.success(pullRequests))
+                }
+            }
+        }
+    }
 }
 
 // MARK: Router
@@ -123,12 +145,15 @@ public extension Octokit {
 enum PullRequestRouter: JSONPostRouter {
     case readPullRequest(Configuration, String, String, String)
     case readPullRequests(Configuration, String, String, String?, Openness, SortType, SortDirection)
+    case writePullRequest(Configuration, String, String, String, String, String, String?, Bool?)
 
     var method: HTTPMethod {
         switch self {
         case .readPullRequest,
              .readPullRequests:
             return .GET
+        case .writePullRequest:
+            return .POST
         }
     }
 
@@ -143,6 +168,7 @@ enum PullRequestRouter: JSONPostRouter {
         switch self {
         case .readPullRequest(let config, _, _, _): return config
         case .readPullRequests(let config, _, _, _, _, _, _): return config
+        case .writePullRequest(let config, _, _, _, _, _, _, _): return config
         }
     }
 
@@ -162,7 +188,21 @@ enum PullRequestRouter: JSONPostRouter {
             }
 
             return parameters
+        case .writePullRequest(_, _, _, let title, let head, let base, let body, let maintainerCanModify):
+            var parameters = [
+                "title": title,
+                "head": head,
+                "base": base,
+            ]
+            if let body = body {
+                parameters["body"] = body
+            }
+            if let maintainerCanModify = maintainerCanModify {
+                parameters["maintainer_can_modify"] = maintainerCanModify.description
+            }
+            return [:]
         }
+
     }
 
     var path: String {
@@ -170,6 +210,8 @@ enum PullRequestRouter: JSONPostRouter {
         case .readPullRequest(_, let owner, let repository, let number):
             return "repos/\(owner)/\(repository)/pulls/\(number)"
         case .readPullRequests(_, let owner, let repository, _, _, _, _):
+            return "repos/\(owner)/\(repository)/pulls"
+        case .writePullRequest(_, let owner, let repository, _, _, _, _, _):
             return "repos/\(owner)/\(repository)/pulls"
         }
     }
