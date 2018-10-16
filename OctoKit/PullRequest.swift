@@ -117,6 +117,19 @@ public extension Octokit {
         }
     }
 
+    /// Create a PullRequest
+    ///
+    /// - Parameters:
+    ///   - session: RequestKitURLSession, defaults to NSURLSession.sharedSession()
+    ///   - owner: The user or organization that owns the repositories.
+    ///   - repository: The name of the repository.
+    ///   - title: Title of the PullRequest
+    ///   - head: head branch
+    ///   - base: base branch
+    ///   - body: body of the pull request
+    ///   - maintainerCanModify: maintainer can modify the pull request
+    ///   - completion: Callback for the outcome of the fetch.
+    /// - Returns: URLSessionDataTask
     public func writePullRequest(_ session: RequestKitURLSession = URLSession.shared,
                              owner: String,
                              repository: String,
